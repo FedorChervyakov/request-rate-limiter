@@ -13,6 +13,22 @@ def server_url(httpserver):
     return httpserver.url_for("/")
 
 
+def test_http_methods(server_url):
+    RPS = 500 # requests per second
+
+    @rate_limiter(RPS)
+    def make_request():
+        methods = ['GET', 'POST', 'PUT', 'PATCH', 'HEAD', 'OPTIONS', 'DELETE']
+
+        for method in methods:
+            res = requests.get(server_url)
+            assert isinstance(res, requests.Response)
+            time.sleep(1/RPS)
+
+    make_request()
+
+
+
 def test_rate_limit_violating_request_discarded(server_url):
     RPS = 1 # requests per second
     limiter = rate_limiter(RPS)
@@ -29,7 +45,7 @@ def test_rate_limit_violating_request_discarded(server_url):
 
 
 def test_rate_limit_complying_requests_executed(server_url):
-    RPS = 20 # requests per second
+    RPS = 200 # requests per second
     limiter = rate_limiter(RPS)
 
     @limiter
@@ -62,9 +78,9 @@ def test_separate_rate_limiters_do_not_interfere(server_url):
 
 
 def test_one_rate_limiter_multiple_functions(server_url):
-    RPS_20 = 20
+    RPS = 200
 
-    limiter = rate_limiter(RPS_20)
+    limiter = rate_limiter(RPS)
 
     @limiter
     def make_request_1():
@@ -82,10 +98,10 @@ def test_one_rate_limiter_multiple_functions(server_url):
     assert res is None
 
     # test rate respected
-    time.sleep(1/RPS_20)
+    time.sleep(1/RPS)
 
     res = make_request_1()
     assert isinstance(res, requests.Response)
 
-    time.sleep(1/RPS_20)
+    time.sleep(1/RPS)
     assert isinstance(res, requests.Response)
